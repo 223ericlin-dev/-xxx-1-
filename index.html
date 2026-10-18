@@ -438,7 +438,7 @@ function finishTest() {
     </p>
   `;
 
-  resultMessageEl.textContent = "測驗已完成。正在嘗試送出資料……";
+  resultMessageEl.textContent = "測驗已完成。正在嘗試送出資料……請勿關閉網頁";
 
   uploadEvents();
 }
@@ -460,7 +460,7 @@ async function uploadEvents() {
   }
 
   try {
-    resultMessageEl.textContent = "正在將資料安全傳送到 Google 試算表...";
+    resultMessageEl.textContent = "正在將資料安全傳送到 Google 試算表...請勿關閉網頁";
     resultMessageEl.style.color = "#1a73e8";
 
     // 🔒 1. 這裡幫您暗中打包了通關密碼，對齊後端的防火牆
