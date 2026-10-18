@@ -1,0 +1,517 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>注意力與反應時間測驗</title>
+<style>
+  :root {
+    font-family: system-ui, -apple-system, "Noto Sans TC", sans-serif;
+    color: #202124;
+    background: #f5f7fb;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; padding: 18px; }
+  main { max-width: 720px; margin: 0 auto; }
+  .panel {
+    background: #fff;
+    border-radius: 18px;
+    padding: 22px;
+    box-shadow: 0 4px 18px rgba(0,0,0,.06);
+    margin: 12px 0;
+  }
+  h1 { font-size: 1.55rem; margin: 0 0 12px; }
+  h2 { font-size: 1.15rem; margin-top: 0; }
+  p, li { line-height: 1.65; }
+  button, select { font: inherit; }
+  button {
+    border: 0;
+    border-radius: 12px;
+    padding: 13px 18px;
+    background: #1a73e8;
+    color: white;
+    cursor: pointer;
+    font-weight: 650;
+  }
+  button:disabled { opacity: .5; cursor: not-allowed; }
+  select {
+    width: 100%;
+    padding: 11px;
+    border: 1px solid #c6c9d0;
+    border-radius: 10px;
+    background: white;
+  }
+  .muted { color: #5f6368; font-size: .92rem; }
+  .hidden { display: none !important; }
+  .progress {
+    height: 8px;
+    background: #e8eaed;
+    border-radius: 99px;
+    overflow: hidden;
+    margin: 12px 0;
+  }
+  .progress > div {
+    height: 100%;
+    width: 0;
+    background: #1a73e8;
+    transition: width .15s;
+  }
+  .prompt {
+    text-align: center;
+    font-weight: 700;
+    font-size: 1.15rem;
+  }
+  .target {
+    min-height: 105px;
+    display: grid;
+    place-items: center;
+    font-size: 3.2rem;
+    font-weight: 750;
+    margin: 14px 0;
+    border-radius: 14px;
+    background: #f1f3f4;
+  }
+  .stimulus {
+    min-height: 190px;
+    width: 100%;
+    display: grid;
+    place-items: center;
+    font-size: 4.2rem;
+    font-weight: 750;
+    border-radius: 16px;
+    background: #fff;
+    border: 2px solid #d9dde3;
+    color: #202124;
+    touch-action: manipulation;
+  }
+  .stimulus:focus { outline: 3px solid #a8c7fa; }
+  .status {
+    min-height: 1.6em;
+    text-align: center;
+    font-weight: 650;
+    margin-top: 12px;
+  }
+  .row {
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+    align-items: center;
+  }
+  .row > * { flex: 1; }
+  .error { color: #b3261e; }
+  .success { color: #137333; }
+  .small { font-size: .85rem; }
+</style>
+</head>
+<body>
+<main>
+  <section id="intro" class="panel">
+    <h1>注意力與反應時間測驗</h1>
+    <p>
+      請找出與上方相同的數字、形狀或顏色。
+      下方項目會持續變化；當你發現相同項目時，
+      請立即點擊下方項目。
+    </p>
+    <p>
+      請盡可能保持專注，並快速做出反應。
+      測驗共三個階段，每階段三回合。
+    </p>
+    <p class="muted">
+      請在安靜、安全的環境中完成測驗。若有不舒服，可隨時停止。
+    </p>
+
+    <div class="panel"
+         style="background:#f8f9fa;box-shadow:none;padding:16px;">
+      <h2>研究者設定（開始前設定，請勿讓受試者查看）</h2>
+      <label for="condition">實驗條件</label>
+      <select id="condition">
+        <option value="A">A－無心理預期+戒斷習慣</option>
+        <option value="B">B－無</option>
+        <option value="C">C－有心理預期＋多一個習慣</option>
+      </select>
+      <p class="muted small">
+        請研究者先依實驗流程安排條件，再將裝置交給受試者。
+        此選項只記錄條件，不會自動執行各組的心理預期或習慣操作。
+      </p>
+    </div>
+
+    <button id="startBtn">開始測試</button>
+  </section>
+
+  <section id="test" class="panel hidden">
+    <div class="row">
+      <div><strong id="stageLabel">階段 1／3</strong></div>
+      <div style="text-align:right" id="roundLabel">回合 1／3</div>
+    </div>
+
+    <div class="progress"><div id="progressBar"></div></div>
+
+    <div class="prompt" id="prompt">選出相同的數字</div>
+    <div class="muted" style="text-align:center">上方項目</div>
+    <div id="target" class="target">—</div>
+    <div class="muted" style="text-align:center">請點擊下方變化的項目</div>
+
+    <button id="stimulus" class="stimulus" aria-label="點擊目前項目">
+      準備中
+    </button>
+
+    <div id="status" class="status" aria-live="polite"></div>
+    <p class="muted small">請依照畫面操作，不必輸入任何編號。</p>
+  </section>
+
+  <section id="result" class="panel hidden">
+    <h1>測驗完成</h1>
+    <p id="resultMessage">測驗資料已整理。</p>
+    <div id="summary"></div>
+    <p class="muted">
+      網頁已嘗試將資料傳送至 Google 試算表。
+      請研究者確認試算表是否收到資料；
+      若沒有收到，請檢查 Apps Script 網址與部署權限。
+    </p>
+    <button id="retryBtn">重新測驗</button>
+  </section>
+</main>
+
+<script>
+"use strict";
+
+const GOOGLE_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbyRPZ4Lb4D1MSV0oihfLGNRqsnDBvoYsPHwJLUCqdGnk4tjSJ2DQ-vFKeNo8Bggpmukfg/exec";
+
+const ROUNDS_PER_STAGE = 3;
+const MAX_TARGET_WAIT_MS = 10000;
+
+const SHAPES = ["●", "■", "▲", "◆", "★"];
+
+const COLORS = [
+  { name: "紅色", value: "#d93025" },
+  { name: "藍色", value: "#1a73e8" },
+  { name: "綠色", value: "#188038" },
+  { name: "黃色", value: "#f9ab00" },
+  { name: "紫色", value: "#9334e6" }
+];
+
+const introEl = document.getElementById("intro");
+const testEl = document.getElementById("test");
+const resultEl = document.getElementById("result");
+const conditionEl = document.getElementById("condition");
+const startBtn = document.getElementById("startBtn");
+const stimulusBtn = document.getElementById("stimulus");
+const targetEl = document.getElementById("target");
+const promptEl = document.getElementById("prompt");
+const statusEl = document.getElementById("status");
+const stageLabelEl = document.getElementById("stageLabel");
+const roundLabelEl = document.getElementById("roundLabel");
+const progressBarEl = document.getElementById("progressBar");
+const summaryEl = document.getElementById("summary");
+const resultMessageEl = document.getElementById("resultMessage");
+
+let condition = "A";
+let stageIndex = 0;
+let roundIndex = 0;
+let currentTarget = null;
+let currentStimulus = null;
+let targetShown = false;
+let reactionStart = 0;
+let changeTimer = null;
+let targetTimer = null;
+let nextRoundTimer = null;
+let events = [];
+let correctCount = 0;
+let errorCount = 0;
+let stopped = false;
+
+const stages = [
+  { key: "數字", prompt: "選出相同的數字", interval: 200 },
+  { key: "形狀", prompt: "選出相同的形狀", interval: 400 },
+  { key: "顏色", prompt: "選出相同的顏色", interval: 400 }
+];
+
+function randomInt(min, max) {
+  return Math.floor(Math.random() * (max - min + 1)) + min;
+}
+
+function makeTarget(stage) {
+  if (stage.key === "數字") {
+    const value = String(randomInt(1, 100));
+    return { value, display: value };
+  }
+
+  if (stage.key === "形狀") {
+    const value = SHAPES[randomInt(0, SHAPES.length - 1)];
+    return { value, display: value };
+  }
+
+  const color = COLORS[randomInt(0, COLORS.length - 1)];
+  return {
+    value: color.name,
+    display: color.name,
+    color: color.value
+  };
+}
+
+function makeNonTarget(stage) {
+  let item;
+
+  do {
+    item = makeTarget(stage);
+  } while (item.value === currentTarget.value);
+
+  return item;
+}
+
+function setStimulus(item) {
+  currentStimulus = item;
+  stimulusBtn.textContent = item.display;
+  stimulusBtn.style.color = item.color || "#202124";
+  stimulusBtn.style.background = "#ffffff";
+}
+
+function clearRoundTimers() {
+  if (changeTimer !== null) clearInterval(changeTimer);
+  if (targetTimer !== null) clearTimeout(targetTimer);
+  if (nextRoundTimer !== null) clearTimeout(nextRoundTimer);
+
+  changeTimer = null;
+  targetTimer = null;
+  nextRoundTimer = null;
+}
+
+function addEvent(eventName, reactionTime, errorFlag) {
+  const stage = stages[stageIndex];
+
+  events.push({
+    condition: condition,
+    stage: stage.key,
+    round: roundIndex + 1,
+    event: eventName,
+    reactionTime: reactionTime == null ? "" : Math.round(reactionTime),
+    error: errorFlag ? 1 : 0
+  });
+}
+
+function updateLabels() {
+  stageLabelEl.textContent =
+    `階段 ${stageIndex + 1}／3：${stages[stageIndex].key}`;
+
+  roundLabelEl.textContent =
+    `回合 ${roundIndex + 1}／${ROUNDS_PER_STAGE}`;
+
+  const completed = stageIndex * ROUNDS_PER_STAGE + roundIndex;
+  progressBarEl.style.width = `${(completed / 9) * 100}%`;
+}
+
+function startTest() {
+  condition = conditionEl.value;
+  stageIndex = 0;
+  roundIndex = 0;
+  events = [];
+  correctCount = 0;
+  errorCount = 0;
+  stopped = false;
+
+  introEl.classList.add("hidden");
+  resultEl.classList.add("hidden");
+  testEl.classList.remove("hidden");
+
+  startRound();
+}
+
+function startRound() {
+  clearRoundTimers();
+
+  targetShown = false;
+
+  const stage = stages[stageIndex];
+
+  currentTarget = makeTarget(stage);
+  targetEl.textContent = currentTarget.display;
+  targetEl.style.color = currentTarget.color || "#202124";
+
+  promptEl.textContent = stage.prompt;
+  statusEl.textContent = "";
+  statusEl.className = "status";
+
+  updateLabels();
+  setStimulus(makeNonTarget(stage));
+
+  // 目標出現時間隨機安排在 1 至 9.9 秒內。
+  const targetDueMs = randomInt(1000, MAX_TARGET_WAIT_MS - 100);
+
+  changeTimer = setInterval(() => {
+    if (!targetShown && !stopped) {
+      setStimulus(makeNonTarget(stage));
+    }
+  }, stage.interval);
+
+  targetTimer = setTimeout(showTarget, targetDueMs);
+}
+
+function showTarget() {
+  if (stopped || targetShown) return;
+
+  targetShown = true;
+
+  if (changeTimer !== null) {
+    clearInterval(changeTimer);
+    changeTimer = null;
+  }
+
+  setStimulus(currentTarget);
+
+  // 反應時間從目標實際顯示時開始計算。
+  reactionStart = performance.now();
+
+  statusEl.textContent = "請立即點擊相同項目";
+}
+
+function handleStimulusClick() {
+  if (stopped) return;
+
+  if (!targetShown) {
+    errorCount++;
+    addEvent("錯誤反應", "", true);
+
+    statusEl.textContent = "請繼續專注，找出相同項目";
+    statusEl.className = "status error";
+    return;
+  }
+
+  const reactionTime = performance.now() - reactionStart;
+
+  correctCount++;
+  addEvent("正確反應", reactionTime, false);
+
+  targetShown = false;
+
+  statusEl.textContent =
+    `已記錄，反應時間 ${Math.round(reactionTime)} ms`;
+
+  statusEl.className = "status success";
+  stimulusBtn.disabled = true;
+
+  progressBarEl.style.width =
+    `${((stageIndex * ROUNDS_PER_STAGE + roundIndex + 1) / 9) * 100}%`;
+
+  nextRoundTimer = setTimeout(() => {
+    stimulusBtn.disabled = false;
+
+    roundIndex++;
+
+    if (roundIndex >= ROUNDS_PER_STAGE) {
+      stageIndex++;
+      roundIndex = 0;
+    }
+
+    if (stageIndex >= stages.length) {
+      finishTest();
+    } else {
+      startRound();
+    }
+  }, 650);
+}
+
+function finishTest() {
+  stopped = true;
+  clearRoundTimers();
+
+  testEl.classList.add("hidden");
+  resultEl.classList.remove("hidden");
+
+  const validEvents = events.filter(
+    event => event.event === "正確反應"
+  );
+
+  const average = validEvents.length
+    ? Math.round(
+        validEvents.reduce(
+          (sum, event) => sum + Number(event.reactionTime || 0), 0
+        ) / validEvents.length
+      )
+    : null;
+
+  summaryEl.innerHTML = `
+    <p><strong>實驗條件：</strong>${escapeHtml(condition)}</p>
+    <p><strong>完成正確回合：</strong>${correctCount}／9</p>
+    <p><strong>錯誤點擊次數：</strong>${errorCount}</p>
+    <p><strong>平均反應時間：</strong>
+      ${average === null ? "無資料" : average + " ms"}
+    </p>
+  `;
+
+  resultMessageEl.textContent = "測驗已完成。正在嘗試送出資料……";
+
+  uploadEvents();
+}
+
+function escapeHtml(value) {
+  return String(value).replace(/[&<>"']/g, char => ({
+    "&": "&amp;",
+    "<": "&lt;",
+    ">": "&gt;",
+    '"': "&quot;",
+    "'": "&#39;"
+  })[char]);
+}
+
+async function uploadEvents() {
+  if (!GOOGLE_SCRIPT_URL) {
+    resultMessageEl.textContent = "測驗已完成，但尚未設定 Apps Script 網址，因此資料沒有送出。";
+    return;
+  }
+
+  try {
+    resultMessageEl.textContent = "正在將資料安全傳送到 Google 試算表...";
+    resultMessageEl.style.color = "#1a73e8";
+
+    // 🔒 1. 這裡幫您暗中打包了通關密碼，對齊後端的防火牆
+    const payload = {
+      secretToken: "xxx-1", 
+      events: events
+    };
+
+    // 🌐 2. 使用標準的 cors 模式進行安全發送
+    const response = await fetch(GOOGLE_SCRIPT_URL, {
+      method: "POST",
+      mode: "cors",
+      headers: {
+        "Content-Type": "text/plain;charset=utf-8"
+      },
+      body: JSON.stringify(payload)
+    });
+
+    if (!response.ok) throw new Error("網路回應不正確");
+    const result = await response.json();
+
+    if (result.status === "success") {
+      resultMessageEl.textContent = "🎉 資料已成功加密並寫入 Google 試算表！";
+      resultMessageEl.className = "success";
+    } else {
+      throw new Error(result.message || "試算表寫入失敗");
+    }
+
+  } catch (err) {
+    console.error("上傳失敗詳細原因:", err);
+    resultMessageEl.textContent = "❌ 資料上傳失敗。請確認 Apps Script 已部署為『新版本』且權限為『任何人』。";
+    resultMessageEl.className = "error";
+  }
+}
+
+
+function resetApp() {
+  clearRoundTimers();
+  stopped = false;
+
+  introEl.classList.remove("hidden");
+  testEl.classList.add("hidden");
+  resultEl.classList.add("hidden");
+
+  stimulusBtn.disabled = false;
+  progressBarEl.style.width = "0%";
+}
+
+startBtn.addEventListener("click", startTest);
+stimulusBtn.addEventListener("click", handleStimulusClick);
+document.getElementById("retryBtn").addEventListener("click", resetApp);
+</script>
+</body>
+</html>
